@@ -1,0 +1,303 @@
+TrendHunter — Technical Specification for Development Agent
+
+ROLE AND WORK FORMAT
+You are a Senior Frontend + Node.js Prototyping Engineer.
+You must implement a mobile web prototype for the product “TrendHunter”.
+
+Work must be executed step by step.
+Steps must not be merged.
+Each step must include tests proving correctness before moving on.
+
+------------------------------------------------------------
+
+PRODUCT GOAL
+
+TrendHunter helps creators and sellers discover trending home products
+by watching real embedded TikTok and Instagram review posts,
+analyzing engagement metrics, and saving promising products into a
+pipeline called “В работе”.
+
+Key UX principles:
+- Real embedded social posts (for user attraction)
+- Feed shows exactly ONE post per screen (stories-style vertical feed)
+- Lightweight implementation (no mass embedding)
+
+------------------------------------------------------------
+
+PROJECT STRUCTURE
+
+/package.json
+/server.js
+/public/
+  feed.html
+  dashboard.html
+  config.js
+  app.js
+/tests/
+  server.test.js
+  config.test.js
+  logic.test.js
+  mount-window.test.js
+  dashboard.test.js
+  e2e.test.js (optional)
+
+CONSTRAINTS
+- No frameworks (React/Vue/Svelte prohibited)
+- Vanilla JavaScript only
+- Tailwind CSS via CDN allowed
+- No build step required
+- Must run via:
+  npm install
+  npm test
+  npm start
+
+------------------------------------------------------------
+
+LANGUAGE REQUIREMENT
+
+All UI text and mock content MUST be in Russian.
+
+------------------------------------------------------------
+
+TEXT_CONFIG (MANDATORY)
+
+In public/config.js, at the very top of the file,
+define TEXT_CONFIG containing ALL visible UI text.
+
+No hardcoded UI strings are allowed anywhere else.
+
+Mandatory TEXT_CONFIG keys:
+
+app_name = "TrendHunter"
+tab_feed = "Лента"
+tab_dashboard = "Дашборд"
+
+btn_save = "В работу"
+btn_saved = "Сохранено"
+btn_open_post = "Открыть пост"
+
+filter_category = "Категория"
+filter_all = "Все"
+cat_home = "Дом"
+cat_kids = "Дети"
+cat_tech = "Техника"
+
+sort_label = "Сортировка"
+sort_sat_asc = "По насыщенности (лучше → хуже)"
+sort_sat_desc = "По насыщенности (хуже → лучше)"
+sort_price_asc = "По цене (дешевле → дороже)"
+sort_price_desc = "По цене (дороже → дешевле)"
+sort_views_desc = "По просмотрам (сначала больше)"
+
+metric_views = "Просмотры"
+metric_likes = "Лайки"
+metric_comments = "Комментарии"
+metric_saturation = "Насыщенность"
+price_label = "Цена"
+
+fallback_embed_title = "Не удалось встроить пост"
+fallback_embed_body = "Откройте пост по ссылке или попробуйте позже."
+
+empty_saved_title = "Пока пусто"
+empty_saved_body = "Сохраните товары из ленты в «В работу»."
+
+alert_saved = "Товар добавлен в «В работу»."
+
+------------------------------------------------------------
+
+POST_CONFIG (MANDATORY, CONFIG-ONLY CONTENT)
+
+All embedded posts must come ONLY from POST_CONFIG.
+No scraping, no searching, no invented links.
+
+DEFAULT TikTok LINKS (REAL, NORMALIZED):
+
+POST_CONFIG.tiktok =
+- https://www.tiktok.com/@karissa.brighton/video/7599004879440416031
+- https://www.tiktok.com/@karissa.brighton/video/7598275974974704926
+- https://www.tiktok.com/@karissa.brighton/video/7597894830575848734
+- https://www.tiktok.com/@karissa.brighton/video/7597511240868564254
+- https://www.tiktok.com/@karissa.brighton/video/7597181792952569119
+- https://www.tiktok.com/@karissa.brighton/video/7596780691359091999
+- https://www.tiktok.com/@karissa.brighton/video/7595667396921134366
+- https://www.tiktok.com/@karissa.brighton/video/7594949743646674206
+- https://www.tiktok.com/@karissa.brighton/video/7594555155895438622
+- https://www.tiktok.com/@karissa.brighton/video/7594212911170522399
+
+DEFAULT Instagram LINKS (TEST STRUCTURE, MAY FAIL EMBED):
+
+POST_CONFIG.instagram =
+- https://www.instagram.com/reel/DFpu68xMsxg/
+- https://www.instagram.com/reel/DIcEswNSPoj/
+- https://www.instagram.com/reel/DSGApwPEiVJ/
+- https://www.instagram.com/reel/DKFeKN-KGhj/
+- https://www.instagram.com/reel/C_56_JCxiwp/
+- https://www.instagram.com/reel/C-RPOaJv7-L/
+- https://www.instagram.com/reel/DJ-W83hu0nc/
+- https://www.instagram.com/reel/DRpNs_uj06H/
+- https://www.instagram.com/reel/DIkZhm6PkIB/
+- https://www.instagram.com/reel/DKpVH56MU87/
+
+The app MUST gracefully handle Instagram embed failures
+and show fallback UI.
+
+------------------------------------------------------------
+
+URL NORMALIZATION (MANDATORY)
+
+When reading POST_CONFIG:
+
+- Strip all query parameters and fragments
+- TikTok must match:
+  https://www.tiktok.com/@<handle>/video/<digits>
+- Instagram must match:
+  https://www.instagram.com/reel/<shortcode>/
+  https://www.instagram.com/p/<shortcode>/
+
+------------------------------------------------------------
+
+DATA MODEL (GENERATED AT RUNTIME)
+
+Each feed item contains:
+- id
+- platform (tiktok | instagram)
+- url
+- productName (Russian)
+- productDescription (Russian, social-style)
+- category (Дом | Дети | Техника)
+- priceRub
+- statsNow:
+  - views
+  - likes
+  - comments
+- saturationScore
+- saved (boolean)
+
+SATURATION FORMULA:
+saturationScore = views / (likes + comments)
+
+Display with 1 decimal.
+
+STAT RANGES:
+- views: 20 000 – 6 000 000
+- likes: 300 – 400 000
+- comments: 10 – 25 000
+
+Higher engagement → lower saturation.
+
+------------------------------------------------------------
+
+SERVER ARCHITECTURE
+
+Node.js + Express.
+
+Routes:
+- /        → redirect to /feed
+- /feed   → public/feed.html
+- /dashboard → public/dashboard.html
+
+Static files served from /public.
+
+------------------------------------------------------------
+
+FEED PAGE (CORE UX)
+
+- Vertical feed with CSS scroll-snap
+- Each slide = 100vh
+- Exactly one post per screen
+
+Each slide shows:
+- Embedded post OR fallback
+- Product name
+- Description
+- Category badge
+- Price
+- Views / Likes / Comments
+- Saturation score (color-coded)
+- Button: “В работу” → “Сохранено”
+
+Saved state persists via localStorage.
+
+------------------------------------------------------------
+
+EMBED RULES (CRITICAL)
+
+- Never embed all posts at once
+- Only active slide (and optional ±1 neighbor) may mount embed
+- Use IntersectionObserver
+- Remove embed DOM when slide becomes inactive
+
+TikTok:
+- Use https://www.tiktok.com/embed.js
+- blockquote.tiktok-embed
+
+Instagram:
+- Use https://www.instagram.com/embed.js
+- blockquote.instagram-media
+- Call instgrm.Embeds.process()
+
+If embed fails:
+- Show fallback UI
+- Provide “Открыть пост” link
+- Do NOT break scrolling
+
+------------------------------------------------------------
+
+DASHBOARD PAGE
+
+Must show:
+1) KPIs:
+   - Total items
+   - Saved items
+   - Average saturation
+2) “Товары с ростом за 7 дней”
+   - Lightweight sparklines (no chart libs)
+3) Saved items list
+
+------------------------------------------------------------
+
+DEVELOPMENT STEPS WITH TESTS (MANDATORY)
+
+STEP 1 — Server scaffold
+Test: /feed and /dashboard return 200
+
+STEP 2 — Config layer
+Test: TEXT_CONFIG exists
+Test: TikTok URLs normalized and valid
+
+STEP 3 — Feed layout (no embeds)
+Test: saturation formula
+Test: sorting
+Test: saving persistence
+
+STEP 4 — Embed mount window
+Test: only active ±1 slides are mounted
+
+STEP 5 — Dashboard
+Test: KPI calculations
+Test: saved list mapping
+
+STEP 6 — Optional E2E
+Feed → save → dashboard reflects state
+
+------------------------------------------------------------
+
+PROHIBITIONS
+
+- Do NOT invent links
+- Do NOT scrape platforms
+- Do NOT mount all embeds
+- Do NOT hardcode UI strings
+
+------------------------------------------------------------
+
+ACCEPTANCE CRITERIA
+
+The prototype is accepted only if:
+- TikTok links are exactly as specified
+- Feed is one-post-per-screen
+- Embeds are mounted lazily
+- UI is fully in Russian
+- Saving works and persists
+- Dashboard reflects saved data
+- Tests exist and pass
